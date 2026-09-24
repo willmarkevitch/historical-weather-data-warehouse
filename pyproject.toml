@@ -20,3 +20,6 @@ include = ["src*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra"
+markers = [
+    "integration: tests that require external infrastructure",
+]
