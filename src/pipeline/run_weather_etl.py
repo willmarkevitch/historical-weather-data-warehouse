@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+from src.pipeline.raw_filename import build_raw_filename
 from src.ingestion.weather_client import WeatherAPIClient
 from src.pipeline.weather_etl import run_weather_etl
 from src.storage.database import get_connection
@@ -8,13 +11,20 @@ def main():
     client = WeatherAPIClient(timeout=30)
     storage = RawWeatherStorage(base_dir="data/raw")
 
+    filename = build_raw_filename(
+        location="san_francisco",
+        start_date="2025-01-02",
+        end_date="2025-01-02",
+        ingested_at=datetime.now(timezone.utc),
+    )
+
     with get_connection() as connection:
         result = run_weather_etl(
             latitude=37.7749,
             longitude=-122.4194,
             start_date="2025-01-02",
             end_date="2025-01-02",
-            filename="san_francisco_2025-01-02.json",
+            filename=filename,
             client=client,
             storage=storage,
             connection=connection,
