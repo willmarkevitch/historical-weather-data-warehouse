@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
+from src.storage.weather_repository import get_latest_observation_time
 from src.models.weather_observation import WeatherObservation
 from src.storage.weather_repository import (
     insert_weather_observation,
@@ -161,3 +162,48 @@ def test_insert_weather_observations_counts_only_inserted_rows():
 
     assert cursor.execute.call_count == 2
     assert result == 1
+
+
+def test_get_latest_observation_time():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+
+    latest_time = datetime(
+        2025,
+        1,
+        3,
+        23,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    cursor.fetchone.return_value = (latest_time,)
+
+    result = get_latest_observation_time(
+        connection,
+        location_id=2,
+    )
+
+    assert result == latest_time
+
+    cursor.execute.assert_called_once()
+
+    query, params = cursor.execute.call_args.args
+
+    assert "MAX(observed_at)" in query
+    assert "WHERE location_id = %s" in query
+    assert params == (2,)
+
+
+def test_get_latest_observation_time_returns_none_when_no_data():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+
+    cursor.fetchone.return_value = (None,)
+
+    result = get_latest_observation_time(
+        connection,
+        location_id=3,
+    )
+
+    assert result is None

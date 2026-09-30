@@ -1,4 +1,5 @@
 from psycopg import Connection
+from datetime import datetime
 
 from src.models.weather_observation import WeatherObservation
 
@@ -67,3 +68,22 @@ def insert_weather_observations(
             inserted_count += cursor.rowcount
 
     return inserted_count
+
+def get_latest_observation_time(
+    connection: Connection,
+    location_id: int,
+) -> datetime | None:
+    query = """
+        SELECT MAX(observed_at)
+        FROM weather_observations
+        WHERE location_id = %s;
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            query,
+            (location_id,),
+        )
+        row = cursor.fetchone()
+
+    return row[0]

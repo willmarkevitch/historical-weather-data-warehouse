@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from src.models.weather_observation import WeatherObservation
 from src.storage.database import get_connection
 from src.storage.weather_repository import insert_weather_observation
+from src.storage.location_repository import get_location_id
+from src.storage.weather_repository import get_latest_observation_time
 
 pytestmark = pytest.mark.integration
 
@@ -156,3 +158,27 @@ def test_postgres_rejects_invalid_humidity():
                         0.0,
                     ),
                 )
+
+
+def test_location_high_water_mark():
+    with get_connection() as connection:
+        location_id = get_location_id(
+            connection,
+            name="los_angeles",
+        )
+
+        assert location_id is not None
+
+        latest_time = get_latest_observation_time(
+            connection,
+            location_id=location_id,
+        )
+
+    assert latest_time == datetime(
+        2025,
+        1,
+        3,
+        23,
+        0,
+        tzinfo=timezone.utc,
+    )
