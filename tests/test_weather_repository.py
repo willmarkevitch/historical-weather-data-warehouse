@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-from src.storage.weather_repository import get_latest_observation_time
 from src.models.weather_observation import WeatherObservation
 from src.storage.weather_repository import (
+    get_latest_observation_time,
     insert_weather_observation,
     insert_weather_observations,
 )
@@ -30,6 +30,7 @@ def test_insert_weather_observation():
     result = insert_weather_observation(
         connection,
         observation,
+        location_id=2,
     )
 
     cursor.execute.assert_called_once()
@@ -44,6 +45,7 @@ def test_insert_weather_observation():
         observation.temperature_c,
         observation.relative_humidity_pct,
         observation.precipitation_mm,
+        2,
     )
     assert result == 1
 
@@ -62,7 +64,11 @@ def test_insert_weather_observation_with_missing_measurements():
         precipitation_mm=None,
     )
 
-    insert_weather_observation(connection, observation)
+    insert_weather_observation(
+        connection,
+        observation,
+        location_id=2,
+    )
 
     _, params = cursor.execute.call_args.args
 
@@ -73,6 +79,7 @@ def test_insert_weather_observation_with_missing_measurements():
         None,
         None,
         None,
+        2,
     )
 
 
@@ -84,6 +91,7 @@ def test_insert_weather_observation_duplicate_returns_zero():
     result = insert_weather_observation(
         connection,
         create_observation(),
+        location_id=2,
     )
 
     assert result == 0
@@ -109,6 +117,7 @@ def test_insert_weather_observations():
     result = insert_weather_observations(
         connection,
         observations,
+        location_id=2,
     )
 
     assert cursor.execute.call_count == 2
@@ -121,6 +130,7 @@ def test_insert_weather_observations_empty_list():
     result = insert_weather_observations(
         connection,
         [],
+        location_id=2,
     )
 
     connection.cursor.assert_not_called()
@@ -145,8 +155,6 @@ def test_insert_weather_observations_counts_only_inserted_rows():
 
     cursor.rowcount = 1
 
-    original_execute = cursor.execute
-
     def execute_with_rowcounts(*args, **kwargs):
         if cursor.execute.call_count == 1:
             cursor.rowcount = 1
@@ -158,6 +166,7 @@ def test_insert_weather_observations_counts_only_inserted_rows():
     result = insert_weather_observations(
         connection,
         observations,
+        location_id=2,
     )
 
     assert cursor.execute.call_count == 2

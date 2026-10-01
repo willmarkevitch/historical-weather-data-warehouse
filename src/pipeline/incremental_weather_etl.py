@@ -6,7 +6,10 @@ from src.pipeline.weather_etl import run_weather_etl
 
 from src.ingestion.weather_client import WeatherAPIClient
 from src.pipeline.incremental import calculate_incremental_date_range
-from src.storage.location_repository import get_location_id
+from src.storage.location_repository import (
+    create_location,
+    get_location_id,
+)
 from src.storage.raw_storage import RawWeatherStorage
 from src.storage.weather_repository import get_latest_observation_time
 
@@ -27,6 +30,12 @@ def run_incremental_weather_etl(
     )
 
     if location_id is None:
+        location_id = create_location(
+            connection,
+            name=location,
+            requested_latitude=latitude,
+            requested_longitude=longitude,
+        )
         latest_observed_at = None
     else:
         latest_observed_at = get_latest_observation_time(
@@ -61,4 +70,5 @@ def run_incremental_weather_etl(
         client=client,
         storage=storage,
         connection=connection,
+        location_id=location_id,
     )

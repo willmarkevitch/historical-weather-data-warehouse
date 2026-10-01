@@ -39,6 +39,7 @@ def test_run_weather_etl():
         client=client,
         storage=storage,
         connection=connection,
+        location_id=2,
     )
 
     assert result.raw_path == Path(
@@ -69,6 +70,10 @@ def test_run_weather_etl():
         "san_francisco_2025-01-01.json"
     )
 
+    _, params = cursor.execute.call_args.args
+
+    assert params[-1] == 2
+
 
 def test_run_weather_etl_stops_when_extraction_fails():
     client = MagicMock()
@@ -87,6 +92,7 @@ def test_run_weather_etl_stops_when_extraction_fails():
             client=client,
             storage=storage,
             connection=connection,
+            location_id=1,
         )
 
     storage.save.assert_not_called()
