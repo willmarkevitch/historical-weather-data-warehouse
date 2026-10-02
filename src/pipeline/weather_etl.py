@@ -16,6 +16,7 @@ class WeatherETLResult:
     transformed_count: int
     inserted_count: int
 
+
 def run_weather_etl(
     latitude: float,
     longitude: float,
@@ -25,6 +26,7 @@ def run_weather_etl(
     client: WeatherAPIClient,
     storage: RawWeatherStorage,
     connection: Connection,
+    location_id: int,
 ) -> WeatherETLResult:
     weather_data = client.fetch_weather(
         latitude=latitude,
@@ -51,6 +53,7 @@ def run_weather_etl(
     inserted_count = insert_weather_observations(
         connection,
         observations,
+        location_id=location_id,
     )
 
     return WeatherETLResult(

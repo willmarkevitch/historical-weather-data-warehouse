@@ -1,4 +1,5 @@
 from psycopg import Connection
+from datetime import datetime
 
 from src.models.weather_observation import WeatherObservation
 
@@ -10,9 +11,10 @@ INSERT_WEATHER_OBSERVATION = """
         longitude,
         temperature_c,
         relative_humidity_pct,
-        precipitation_mm
+        precipitation_mm,
+        location_id
     )
-    VALUES (%s, %s, %s, %s, %s, %s)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (
         observed_at,
         latitude,
@@ -24,6 +26,7 @@ INSERT_WEATHER_OBSERVATION = """
 
 def _observation_to_params(
     observation: WeatherObservation,
+    location_id: int,
 ) -> tuple:
     return (
         observation.timestamp,
@@ -32,25 +35,30 @@ def _observation_to_params(
         observation.temperature_c,
         observation.relative_humidity_pct,
         observation.precipitation_mm,
+        location_id,
     )
 
 
 def insert_weather_observation(
     connection: Connection,
     observation: WeatherObservation,
+    location_id: int,
 ) -> int:
     with connection.cursor() as cursor:
         cursor.execute(
             INSERT_WEATHER_OBSERVATION,
-            _observation_to_params(observation),
+            _observation_to_params(
+                observation,
+                location_id,
+            ),
         )
-
         return cursor.rowcount
 
 
 def insert_weather_observations(
     connection: Connection,
     observations: list[WeatherObservation],
+    location_id: int,
 ) -> int:
     if not observations:
         return 0
@@ -61,9 +69,30 @@ def insert_weather_observations(
         for observation in observations:
             cursor.execute(
                 INSERT_WEATHER_OBSERVATION,
-                _observation_to_params(observation),
+                _observation_to_params(
+                    observation,
+                    location_id,
+                ),
             )
-
             inserted_count += cursor.rowcount
 
     return inserted_count
+
+def get_latest_observation_time(
+    connection: Connection,
+    location_id: int,
+) -> datetime | None:
+    query = """
+        SELECT MAX(observed_at)
+        FROM weather_observations
+        WHERE location_id = %s;
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            query,
+            (location_id,),
+        )
+        row = cursor.fetchone()
+
+    return row[0]
