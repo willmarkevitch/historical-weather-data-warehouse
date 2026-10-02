@@ -1,9 +1,7 @@
 import argparse
-from datetime import datetime, timezone
 
-from src.pipeline.raw_filename import build_raw_filename
 from src.ingestion.weather_client import WeatherAPIClient
-from src.pipeline.weather_etl import run_weather_etl
+from src.pipeline.incremental_weather_etl import run_incremental_weather_etl
 from src.storage.database import get_connection
 from src.storage.raw_storage import RawWeatherStorage
 
@@ -16,7 +14,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--location",
         required=True,
-        help="Location name used for the raw snapshot filename.",
+        help="Location name used for the weather load.",
     )
 
     parser.add_argument(
@@ -47,30 +45,28 @@ def parse_args(argv=None):
 
     return parser.parse_args(argv)
 
+
 def main():
     args = parse_args()
 
     client = WeatherAPIClient(timeout=30)
     storage = RawWeatherStorage(base_dir="data/raw")
 
-    filename = build_raw_filename(
-        location=args.location,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        ingested_at=datetime.now(timezone.utc),
-    )
-
     with get_connection() as connection:
-        result = run_weather_etl(
+        result = run_incremental_weather_etl(
+            location=args.location,
             latitude=args.latitude,
             longitude=args.longitude,
-            start_date=args.start_date,
-            end_date=args.end_date,
-            filename=filename,
+            requested_start_date=args.start_date,
+            requested_end_date=args.end_date,
             client=client,
             storage=storage,
             connection=connection,
         )
+
+    if result is None:
+        print("No new weather data to load.")
+        return
 
     print(f"Raw file: {result.raw_path}")
     print(f"Transformed observations: {result.transformed_count}")
