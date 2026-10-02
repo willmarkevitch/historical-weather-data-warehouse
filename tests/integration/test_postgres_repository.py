@@ -193,24 +193,46 @@ def test_postgres_rejects_invalid_humidity():
 
 
 def test_location_high_water_mark():
+    observation = WeatherObservation(
+        timestamp=datetime(2099, 1, 4, 23, 0, tzinfo=timezone.utc),
+        latitude=10.123456,
+        longitude=-20.654321,
+        temperature_c=20.0,
+        relative_humidity_pct=70,
+        precipitation_mm=0.0,
+    )
+
     with get_connection() as connection:
         location_id = get_location_id(
             connection,
             name="los_angeles",
         )
-
         assert location_id is not None
+
+        insert_weather_observation(
+            connection,
+            observation,
+            location_id=location_id,
+        )
 
         latest_time = get_latest_observation_time(
             connection,
             location_id=location_id,
         )
 
-    assert latest_time == datetime(
-        2025,
-        1,
-        3,
-        23,
-        0,
-        tzinfo=timezone.utc,
-    )
+        assert latest_time == observation.timestamp
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM weather_observations
+                WHERE observed_at = %s
+                  AND latitude = %s
+                  AND longitude = %s;
+                """,
+                (
+                    observation.timestamp,
+                    observation.latitude,
+                    observation.longitude,
+                ),
+            )
