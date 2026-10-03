@@ -236,3 +236,173 @@ def test_location_high_water_mark():
                     observation.longitude,
                 ),
             )
+
+
+def test_same_location_and_timestamp_is_duplicate_even_with_different_coordinates():
+    timestamp = datetime(
+        2099,
+        1,
+        5,
+        12,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    first_observation = WeatherObservation(
+        timestamp=timestamp,
+        latitude=34.059753,
+        longitude=-118.2375,
+        temperature_c=20.0,
+        relative_humidity_pct=60,
+        precipitation_mm=0.0,
+    )
+
+    second_observation = WeatherObservation(
+        timestamp=timestamp,
+        latitude=34.060000,
+        longitude=-118.240000,
+        temperature_c=21.0,
+        relative_humidity_pct=65,
+        precipitation_mm=0.0,
+    )
+
+    with get_connection() as connection:
+        location_id = get_location_id(
+            connection,
+            name="los_angeles",
+        )
+        assert location_id is not None
+
+        first_result = insert_weather_observation(
+            connection,
+            first_observation,
+            location_id=location_id,
+        )
+
+        second_result = insert_weather_observation(
+            connection,
+            second_observation,
+            location_id=location_id,
+        )
+
+        assert first_result == 1
+        assert second_result == 0
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM weather_observations
+                WHERE location_id = %s
+                  AND observed_at = %s;
+                """,
+                (
+                    location_id,
+                    timestamp,
+                ),
+            )
+
+            count = cursor.fetchone()[0]
+
+            assert count == 1
+
+            cursor.execute(
+                """
+                DELETE FROM weather_observations
+                WHERE location_id = %s
+                  AND observed_at = %s;
+                """,
+                (
+                    location_id,
+                    timestamp,
+                ),
+            )
+
+
+def test_different_locations_can_share_same_timestamp():
+    timestamp = datetime(
+        2099,
+        1,
+        6,
+        12,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    los_angeles_observation = WeatherObservation(
+        timestamp=timestamp,
+        latitude=34.059753,
+        longitude=-118.2375,
+        temperature_c=20.0,
+        relative_humidity_pct=60,
+        precipitation_mm=0.0,
+    )
+
+    san_francisco_observation = WeatherObservation(
+        timestamp=timestamp,
+        latitude=37.785587,
+        longitude=-122.40964,
+        temperature_c=15.0,
+        relative_humidity_pct=70,
+        precipitation_mm=0.0,
+    )
+
+    with get_connection() as connection:
+        los_angeles_id = get_location_id(
+            connection,
+            name="los_angeles",
+        )
+        san_francisco_id = get_location_id(
+            connection,
+            name="san_francisco",
+        )
+
+        assert los_angeles_id is not None
+        assert san_francisco_id is not None
+
+        los_angeles_result = insert_weather_observation(
+            connection,
+            los_angeles_observation,
+            location_id=los_angeles_id,
+        )
+
+        san_francisco_result = insert_weather_observation(
+            connection,
+            san_francisco_observation,
+            location_id=san_francisco_id,
+        )
+
+        assert los_angeles_result == 1
+        assert san_francisco_result == 1
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM weather_observations
+                WHERE observed_at = %s
+                  AND location_id IN (%s, %s);
+                """,
+                (
+                    timestamp,
+                    los_angeles_id,
+                    san_francisco_id,
+                ),
+            )
+
+            count = cursor.fetchone()[0]
+
+            assert count == 2
+
+            cursor.execute(
+                """
+                DELETE FROM weather_observations
+                WHERE observed_at = %s
+                  AND location_id IN (%s, %s);
+                """,
+                (
+                    timestamp,
+                    los_angeles_id,
+                    san_francisco_id,
+                ),
+            )
