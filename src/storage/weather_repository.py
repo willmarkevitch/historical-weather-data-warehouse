@@ -16,9 +16,8 @@ INSERT_WEATHER_OBSERVATION = """
     )
     VALUES (%s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (
-        observed_at,
-        latitude,
-        longitude
+        location_id,
+        observed_at
     )
     DO NOTHING;
 """

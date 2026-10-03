@@ -216,3 +216,21 @@ def test_get_latest_observation_time_returns_none_when_no_data():
     )
 
     assert result is None
+
+
+def test_insert_weather_observation_uses_location_time_conflict_target():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    cursor.rowcount = 1
+
+    insert_weather_observation(
+        connection,
+        create_observation(),
+        location_id=2,
+    )
+
+    query, _ = cursor.execute.call_args.args
+
+    normalized_query = " ".join(query.split())
+
+    assert "ON CONFLICT ( location_id, observed_at )" in normalized_query
