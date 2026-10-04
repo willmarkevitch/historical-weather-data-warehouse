@@ -74,6 +74,7 @@ The project is designed around common data engineering concerns including reprod
 - Database integrity constraints
 - Command-line pipeline execution
 - Unit and PostgreSQL integration tests
+- Automated unit testing with GitHub Actions
 
 ## Data Flow
 
@@ -462,4 +463,3 @@ Planned improvements include:
 - Cloud object storage for raw weather data
 - Managed PostgreSQL deployment
 - Streamlit analytics interface
-- Automated CI testing with GitHub Actions
