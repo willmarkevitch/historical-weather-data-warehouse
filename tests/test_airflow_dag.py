@@ -23,7 +23,7 @@ def test_historical_weather_dag_loads(dagbag):
 
 
 def test_historical_weather_dag_has_expected_tasks(dagbag):
-    dag = dagbag.get_dag("historical_weather")
+    dag = dagbag.dags["historical_weather"]
 
     assert dag is not None
     assert set(dag.task_ids) == {
@@ -33,7 +33,7 @@ def test_historical_weather_dag_has_expected_tasks(dagbag):
 
 
 def test_historical_weather_dag_is_manually_triggered(dagbag):
-    dag = dagbag.get_dag("historical_weather")
+    dag = dagbag.dags["historical_weather"]
 
     assert dag is not None
     assert dag.schedule is None
@@ -41,7 +41,7 @@ def test_historical_weather_dag_is_manually_triggered(dagbag):
 
 
 def test_historical_weather_tasks_have_correct_parameters(dagbag):
-    dag = dagbag.get_dag("historical_weather")
+    dag = dagbag.dags["historical_weather"]
 
     assert dag is not None
 
