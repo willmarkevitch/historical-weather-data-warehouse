@@ -1,3 +1,34 @@
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: airflow/Dockerfile
+
+  environment: &airflow-common-env
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__API__BASE_URL: http://airflow-api-server:8080
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:?AIRFLOW_JWT_SECRET must be set}
+    PYTHONPATH: /opt/airflow/project
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: ${POSTGRES_DB}
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    AIRFLOW_TEST_DAGS_FOLDER: /opt/airflow/dags
+
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./src:/opt/airflow/project/src
+    - ./data/raw:/opt/airflow/data/raw
+    - airflow_logs:/opt/airflow/logs
+    - ./tests:/opt/airflow/project/tests:ro
+
+  depends_on:
+    airflow-postgres:
+      condition: service_healthy
+
 services:
   postgres:
     image: postgres:17
@@ -15,5 +46,60 @@ services:
       - weather_postgres_data:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d
 
+  airflow-postgres:
+    image: postgres:17
+    container_name: airflow-postgres
+
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    container_name: airflow-init
+
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+
+    command: db migrate
+
+  airflow-api-server:
+    <<: *airflow-common
+    container_name: airflow-api-server
+    command: api-server
+
+    ports:
+      - "8080:8080"
+
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: airflow-dag-processor
+    command: dag-processor
+
 volumes:
   weather_postgres_data:
+  airflow_postgres_data:
+  airflow_logs:
