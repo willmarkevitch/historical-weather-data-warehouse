@@ -26,3 +26,26 @@ jobs:
 
       - name: Run unit tests
         run: python -m pytest -m "not integration" -v
+
+  airflow-dag-tests:
+    name: Airflow DAG Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Airflow test image
+        run: docker build -f airflow/Dockerfile -t weather-airflow-test .
+
+      - name: Run Airflow DAG tests
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/airflow/dags:/opt/airflow/dags:ro" \
+            -v "${{ github.workspace }}/src:/opt/airflow/project/src:ro" \
+            -v "${{ github.workspace }}/tests:/opt/airflow/project/tests:ro" \
+            -e PYTHONPATH=/opt/airflow/project \
+            -e AIRFLOW_TEST_DAGS_FOLDER=/opt/airflow/dags \
+            -e AIRFLOW__CORE__LOAD_EXAMPLES=false \
+            weather-airflow-test \
+            python -m pytest -v /opt/airflow/project/tests/test_airflow_dag.py

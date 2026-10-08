@@ -16,12 +16,14 @@ x-airflow-common: &airflow-common
     POSTGRES_DB: ${POSTGRES_DB}
     POSTGRES_USER: ${POSTGRES_USER}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    AIRFLOW_TEST_DAGS_FOLDER: /opt/airflow/dags
 
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./src:/opt/airflow/project/src
     - ./data/raw:/opt/airflow/data/raw
     - airflow_logs:/opt/airflow/logs
+    - ./tests:/opt/airflow/project/tests:ro
 
   depends_on:
     airflow-postgres:

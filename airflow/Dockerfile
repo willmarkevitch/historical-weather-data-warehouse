@@ -4,4 +4,5 @@ COPY requirements.txt /requirements.txt
 
 RUN pip install --no-cache-dir \
     "apache-airflow[postgres]==3.3.2" \
-    -r /requirements.txt
+    -r /requirements.txt \
+    "pytest==9.1.1"
