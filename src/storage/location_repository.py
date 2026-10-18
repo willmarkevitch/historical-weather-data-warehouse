@@ -1,3 +1,4 @@
+from src.storage.location_normalization import normalize_location_name
 from psycopg import Connection
 
 
@@ -14,7 +15,7 @@ def get_location_id(
     with connection.cursor() as cursor:
         cursor.execute(
             query,
-            (name,),
+            (normalize_location_name(name),),
         )
         row = cursor.fetchone()
 
@@ -43,7 +44,7 @@ def create_location(
         cursor.execute(
             query,
             (
-                name,
+                normalize_location_name(name),
                 requested_latitude,
                 requested_longitude,
             ),

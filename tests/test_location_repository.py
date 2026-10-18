@@ -69,3 +69,45 @@ def test_create_location():
         40.7128,
         -74.0060,
     )
+
+
+def test_get_location_id_normalizes_name():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    cursor.fetchone.return_value = (2,)
+
+    result = get_location_id(
+        connection,
+        name="San Francisco",
+    )
+
+    assert result == 2
+
+    query, params = cursor.execute.call_args.args
+
+    assert "WHERE name = %s" in query
+    assert params == ("san_francisco",)
+
+
+def test_create_location_normalizes_name():
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    cursor.fetchone.return_value = (3,)
+
+    result = create_location(
+        connection,
+        name="Los Angeles",
+        requested_latitude=34.0522,
+        requested_longitude=-118.2437,
+    )
+
+    assert result == 3
+
+    query, params = cursor.execute.call_args.args
+
+    assert "INSERT INTO locations" in query
+    assert params == (
+        "los_angeles",
+        34.0522,
+        -118.2437,
+    )
